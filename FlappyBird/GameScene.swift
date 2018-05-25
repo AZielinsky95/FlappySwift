@@ -20,13 +20,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
     var pipes:SKNode!
     var canRestart = Bool()
     var scoreLabelNode:SKLabelNode!
+    var gameOverTexture:SKTexture!
+    var gameOverNode:SKNode!
     var score = NSInteger()
+    var restartButton : SKNode!
+    var shareButton : SKNode!
+    var screenShotImage:UIImage!
     
     let birdCategory: UInt32 = 1 << 0
     let worldCategory: UInt32 = 1 << 1
     let pipeCategory: UInt32 = 1 << 2
     let scoreCategory: UInt32 = 1 << 3
-    
     override func didMove(to view: SKView) {
         
         canRestart = true
@@ -43,6 +47,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         self.addChild(moving)
         pipes = SKNode()
         moving.addChild(pipes)
+        
+        
+        createButtons()
+        gameOverTexture = SKTexture(imageNamed: "scoreboard");
+        gameOverNode = SKSpriteNode(texture: gameOverTexture!)
+        gameOverNode.position = CGPoint(x: self.size.width/2, y: self.size.height/2)
+        self.addChild(gameOverNode)
+        gameOverNode.isHidden = true;
         
         // ground
         let groundTexture = SKTexture(imageNamed: "land")
@@ -203,6 +215,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
         
         // Restart animation
         moving.speed = 1
+        
+        //hide lose Menu
+        gameOverNode.isHidden = true;
+        restartButton.isHidden = true;
+        shareButton.isHidden = true;
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if moving.speed > 0  {
@@ -210,15 +227,111 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
                 bird.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
                 bird.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 30))
             }
-        } else if canRestart {
+        }
+        
+        
+        let touch = touches.first
+        let touchLocation = touch!.location(in: self)
+        
+        if restartButton.contains(touchLocation) {
+       
             self.resetScene()
         }
+        else if shareButton.contains(touchLocation)
+        {
+            share(shareImage: screenShotImage);
+        }
+
     }
     
     override func update(_ currentTime: TimeInterval) {
         /* Called before each frame is rendered */
         let value = bird.physicsBody!.velocity.dy * ( bird.physicsBody!.velocity.dy < 0 ? 0.003 : 0.001 )
         bird.zRotation = min( max(-1, value), 0.5 )
+    }
+    
+    private func convertViewToImage() -> UIImage? {
+        UIGraphicsBeginImageContextWithOptions((self.view!.bounds.size), (self.view!.isOpaque), 0.0)
+        self.view!.drawHierarchy(in: (self.view!.bounds), afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    
+    func createButtons()
+    {
+        restartButton = SKSpriteNode(color: SKColor.white, size: CGSize(width: 100, height: 44))
+        restartButton.position = CGPoint(x:self.frame.midX - 100, y:self.frame.midY - 100);
+        let restartLabel = SKLabelNode(fontNamed: "MarkerFelt-Wide")
+        restartLabel.text = "Restart"
+        restartLabel.fontSize = 25
+        restartLabel.fontColor = SKColor.black
+        restartLabel.position = CGPoint(x: 0, y: -10)
+        restartButton.addChild(restartLabel);
+        self.addChild(restartButton)
+        
+        shareButton = SKSpriteNode(color: SKColor.white, size: CGSize(width: 100, height: 44))
+        shareButton.position = CGPoint(x:self.frame.midX + 100, y:self.frame.midY - 100);
+        let shareLabel = SKLabelNode(fontNamed: "MarkerFelt-Wide")
+        shareLabel.text = "Share Image!"
+        shareLabel.fontSize = 14
+        shareLabel.fontColor = SKColor.black
+        shareLabel.position = CGPoint(x: 0, y: -10)
+        shareButton.addChild(shareLabel);
+        self.addChild(shareButton)
+        
+        restartButton.isHidden = true;
+        shareButton.isHidden = true;
+    }
+    
+    func share(shareImage:UIImage?){
+        
+        var objectsToShare = [AnyObject]()
+        
+        if let shareImageObj = shareImage
+        {
+            objectsToShare.append(shareImageObj)
+        }
+        
+        if shareImage != nil
+        {
+            let activityViewController = UIActivityViewController(activityItems: objectsToShare, applicationActivities: nil)
+            activityViewController.popoverPresentationController?.sourceView = self.view
+        
+            let vc = self.view!.window!.rootViewController!
+            vc.present(activityViewController, animated: true, completion: nil)
+        }
+        else
+        {
+            print("There is nothing to share")
+        }
+    }
+    
+    func onLose()
+    {
+        print("you lost")
+        gameOverNode.isHidden = false;
+        restartButton.isHidden = false;
+        shareButton.isHidden = false;
+        screenShotImage = convertViewToImage()
+       
+    
+
+        
+        
+       // let pauseMenu = SKSpriteNode(texture: screenshotTex)
+        
+        //menu size is already image size (by default), no need to set it
+     //   pauseMenu.position = CGPoint(x: (self.size.width - pauseMenu.size.width) * 0.5, y:  (self.size.height - pauseMenu.size.height) * 0.5)
+        
+     //   self.addChild(pauseMenu);
+       // self.scene.paused = YES;
+       // self.scene.view.paused = YES;
+       // self.view.image
+        //Take snap shot
+        //show buttons
+        //dont reset
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -239,13 +352,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate{
                 
                 
                 // Flash background if contact is detected
+                
+                
                 self.removeAction(forKey: "flash")
                 self.run(SKAction.sequence([SKAction.repeat(SKAction.sequence([SKAction.run({
                     self.backgroundColor = SKColor(red: 1, green: 0, blue: 0, alpha: 1.0)
                     }),SKAction.wait(forDuration: TimeInterval(0.05)), SKAction.run({
                         self.backgroundColor = self.skyColor
                         }), SKAction.wait(forDuration: TimeInterval(0.05))]), count:4), SKAction.run({
-                            self.canRestart = true
+                            self.onLose()
+                            //self.canRestart = true
                             })]), withKey: "flash")
             }
         }

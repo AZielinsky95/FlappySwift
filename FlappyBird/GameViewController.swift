@@ -31,12 +31,15 @@ extension SKNode {
 
 class GameViewController: UIViewController {
 
+    var skView : SKView!
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         if let scene = GameScene.unarchiveFromFile("GameScene") as? GameScene {
             // Configure the view.
-            let skView = self.view as! SKView
+            skView = self.view as! SKView
             skView.showsFPS = true
             skView.showsNodeCount = true
             
@@ -47,6 +50,9 @@ class GameViewController: UIViewController {
             scene.scaleMode = .aspectFill
             
             skView.presentScene(scene)
+            
+          //  let image = convertViewToImage()
+            
         }
     }
 
@@ -61,10 +67,4 @@ class GameViewController: UIViewController {
             return UIInterfaceOrientationMask.all
         }
     }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Release any cached data, images, etc that aren't in use.
-    }
-    
 }
